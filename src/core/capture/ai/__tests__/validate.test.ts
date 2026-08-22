@@ -70,4 +70,24 @@ describe('validateApiKey', () => {
     expect(await validateApiKey('mystery', 'secret')).toEqual({ valid: false, reason: 'network' });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('checks a compatible key against the stored base URL, not openai', async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200 });
+    expect(await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1')).toEqual({ valid: true });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.example.com/v1/models');
+    expect(init.headers.Authorization).toBe('Bearer sk-key');
+  });
+
+  it('strips trailing slashes from a compatible base URL', async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200 });
+    await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1///');
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.example.com/v1/models');
+  });
+
+  it('does not send a compatible key anywhere when no base URL is set', async () => {
+    expect(await validateApiKey('openaiCompatible', 'sk-key')).toEqual({ valid: false, reason: 'network' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

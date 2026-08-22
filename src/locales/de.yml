@@ -97,6 +97,7 @@ settings:
   title: Einstellungen
   aiDescriptions: KI-Beschreibungen
   modelCustom: Eigenes Modell
+  baseUrl: Basis-URL
   provider: Anbieter
   model: Modell
   apiKey: API-Schlüssel

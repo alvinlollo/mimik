@@ -48,14 +48,14 @@ function useKeyCheck() {
   const [status, setStatus] = useState<KeyStatus>(null);
   const validated = useRef('');
 
-  const check = useCallback(async (provider: string, apiKey: string) => {
-    const fingerprint = `${provider}:${apiKey}`;
+  const check = useCallback(async (provider: string, apiKey: string, baseUrl?: string) => {
+    const fingerprint = `${provider}:${apiKey}:${baseUrl ?? ''}`;
     if (validated.current === fingerprint) {
       setStatus('valid');
       return;
     }
     setStatus('checking');
-    const result = await sendMessage('validateApiKey', { provider, apiKey }).catch(() => null);
+    const result = await sendMessage('validateApiKey', { provider, apiKey, baseUrl }).catch(() => null);
     if (result?.valid) validated.current = fingerprint;
     setStatus(result?.valid ? 'valid' : result?.reason === 'rejected' ? 'rejected' : 'unreachable');
   }, []);
@@ -98,6 +98,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
   const [provider, setProvider] = useState<AIProviderKey>('openai');
   const [model, setModel] = useState(AI_PROVIDERS.openai.defaultModel);
   const [apiKey, setApiKey] = useState('');
+  const [baseUrl, setBaseUrl] = useState('');
   const [saved, setSaved] = useState(false);
   const aiKeyCheck = useKeyCheck();
   const voiceKeyCheck = useKeyCheck();
@@ -130,6 +131,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
         'aiApiKey',
         'aiProvider',
         'aiModel',
+        'aiBaseUrl',
         'aiLanguage',
         'blurPresets',
         'voiceProvider',
@@ -145,6 +147,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
         setProvider(p);
         setModel((result.aiModel as string) || AI_PROVIDERS[p].defaultModel);
         if (result.aiApiKey) setApiKey(result.aiApiKey as string);
+        if (result.aiBaseUrl) setBaseUrl(result.aiBaseUrl as string);
         if (result.aiLanguage) setAiLanguage(result.aiLanguage as AILanguageCode);
         if (result.blurPresets) setBlurPresets(result.blurPresets as Record<PresetKey, boolean>);
         setVoiceProvider((result.voiceProvider as VoiceProvider) || 'openai');
@@ -162,6 +165,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
     aiApiKey: apiKey,
     aiProvider: provider,
     aiModel: model,
+    aiBaseUrl: baseUrl,
     aiLanguage,
     blurPresets,
     voiceProvider,
@@ -329,6 +333,26 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
             )}
           </div>
 
+          {providerConfig.baseUrl && (
+            <div>
+              <label className="block text-[11px] font-semibold text-foreground mb-1">
+                <Globe size={11} className="inline mr-1 -mt-px" />
+                {i18n.t('settings.baseUrl')}
+              </label>
+              <Input
+                type="text"
+                value={baseUrl}
+                onChange={(e) => {
+                  setBaseUrl(e.target.value);
+                  aiKeyCheck.setStatus(null);
+                }}
+                placeholder="https://api.example.com/v1"
+                aria-label={i18n.t('settings.baseUrl')}
+                className="h-8 text-[12px] rounded-lg border-border"
+              />
+            </div>
+          )}
+
           <div>
             <label className="block text-[11px] font-semibold text-foreground mb-1">{i18n.t('settings.apiKey')}</label>
             <div className="flex items-center gap-1.5">
@@ -346,7 +370,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
                 variant="outline"
                 size="sm"
                 disabled={!apiKey || aiKeyCheck.status === 'checking'}
-                onClick={() => void aiKeyCheck.check(provider, apiKey)}
+                onClick={() => void aiKeyCheck.check(provider, apiKey, baseUrl)}
                 className="h-8 shrink-0 rounded-lg bg-card text-[11px] font-semibold"
               >
                 {i18n.t('settings.checkKey')}

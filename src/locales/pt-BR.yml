@@ -87,6 +87,7 @@ settings:
   provider: Provedor
   model: Modelo
   modelCustom: Modelo personalizado
+  baseUrl: URL base
   apiKey: Chave da API
   aiLanguage: "Idioma das descrições"
   voiceNarration: "Narração por voz"
