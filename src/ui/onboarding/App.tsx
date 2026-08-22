@@ -8,6 +8,7 @@ import type { VoiceProvider } from '@/core/capture/voice/transcribe';
 import { localStorage, openSidebar, requestHostPermissions } from '@/lib/browser-api';
 import { Input } from '@/ui/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/components/ui/select';
+import { KeyStatusNote, ModelList, useKeyCheck } from '@/ui/shared/key-check';
 import MicrophonePicker from '@/ui/shared/MicrophonePicker';
 
 interface StepProps {
@@ -120,6 +121,7 @@ function AISetupStep({ onNext, onSkip, onBack, index, total }: StepProps) {
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [aiLanguage, setAiLanguage] = useState<AILanguageCode>('en');
+  const aiKeyCheck = useKeyCheck();
 
   useEffect(() => {
     const load = () =>
@@ -147,6 +149,7 @@ function AISetupStep({ onNext, onSkip, onBack, index, total }: StepProps) {
     const nextModel = AI_PROVIDERS[newProvider].defaultModel;
     setProvider(newProvider);
     setModel(nextModel);
+    aiKeyCheck.setStatus(null);
     void localStorage.set({ aiProvider: newProvider, aiModel: nextModel });
   };
 
@@ -157,11 +160,13 @@ function AISetupStep({ onNext, onSkip, onBack, index, total }: StepProps) {
 
   const handleApiKeyChange = (nextKey: string) => {
     setApiKey(nextKey);
+    aiKeyCheck.setStatus(null);
     void localStorage.set({ aiApiKey: nextKey });
   };
 
   const handleBaseUrlChange = (nextUrl: string) => {
     setBaseUrl(nextUrl);
+    aiKeyCheck.setStatus(null);
     void localStorage.set({ aiBaseUrl: nextUrl });
   };
 
@@ -250,6 +255,20 @@ function AISetupStep({ onNext, onSkip, onBack, index, total }: StepProps) {
                 placeholder="sk-..."
                 className="w-full rounded-xl px-4 py-2.5 text-sm focus:border-accent focus:ring-accent/10"
               />
+              <div className="flex items-center gap-3 mt-2">
+                <button
+                  type="button"
+                  disabled={!apiKey || aiKeyCheck.status === 'checking'}
+                  onClick={() => void aiKeyCheck.check(provider, apiKey, baseUrl)}
+                  className="px-4 py-2 bg-card text-foreground border border-border rounded-lg font-semibold text-xs hover:border-accent hover:text-accent transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  {i18n.t('settings.checkKey')}
+                </button>
+                <div className="min-w-0">
+                  <KeyStatusNote status={aiKeyCheck.status} />
+                </div>
+              </div>
+              {aiKeyCheck.models && <ModelList models={aiKeyCheck.models} />}
             </div>
 
             <div>

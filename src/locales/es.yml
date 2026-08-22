@@ -128,6 +128,7 @@ settings:
   keyInvalid: "Esa clave de API fue rechazada. Compru\xE9bala e int\xE9ntalo de nuevo."
   checkKey: Comprobar clave
   keyUnreachable: No se pudo conectar con el proveedor. Revisa tu conexión e inténtalo de nuevo.
+  modelsFound: "$1 modelos disponibles"
   smartBlur: Desenfoque inteligente
   privacyNotice: "Tus claves y tu audio solo van al proveedor que elijas. Nada más sale de tu navegador."
   bugReport: "¿Encontraste un bug? Repórtalo en GitHub"

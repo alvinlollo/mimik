@@ -134,6 +134,7 @@ settings:
   keyInvalid: Dieser API-Schlüssel wurde abgelehnt. Prüfe ihn und versuche es erneut.
   checkKey: Schlüssel prüfen
   keyUnreachable: Der Anbieter war nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.
+  modelsFound: "$1 Modelle verfügbar"
 
 blurPresets:
   email: E-Mail

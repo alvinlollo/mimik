@@ -26,12 +26,12 @@ import { type BrandLogo, defaultFooterLine, makeBrandLogo } from '@/core/export/
 import { DEFAULT_TARGET_COLOR, TARGET_COLORS } from '@/core/screenshot/types';
 import { localStorage } from '@/lib/browser-api';
 import { logger } from '@/lib/logger';
-import { sendMessage } from '@/lib/messaging';
 import { Button } from '@/ui/components/ui/button';
 import { Input } from '@/ui/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/components/ui/select';
 import ColorPicker from '@/ui/shared/ColorPicker';
+import { KeyStatusNote, ModelList, useKeyCheck } from '@/ui/shared/key-check';
 import MicrophonePicker from '@/ui/shared/MicrophonePicker';
 import { changedSettings, type SettingsSnapshot } from '@/ui/shared/settings-autosave';
 
@@ -41,52 +41,6 @@ interface SettingsViewProps {
 
 const SAVE_DEBOUNCE_MS = 400;
 const SAVED_BADGE_MS = 1600;
-
-type KeyStatus = 'checking' | 'valid' | 'rejected' | 'unreachable' | null;
-
-function useKeyCheck() {
-  const [status, setStatus] = useState<KeyStatus>(null);
-  const validated = useRef('');
-
-  const check = useCallback(async (provider: string, apiKey: string, baseUrl?: string) => {
-    const fingerprint = `${provider}:${apiKey}:${baseUrl ?? ''}`;
-    if (validated.current === fingerprint) {
-      setStatus('valid');
-      return;
-    }
-    setStatus('checking');
-    const result = await sendMessage('validateApiKey', { provider, apiKey, baseUrl }).catch(() => null);
-    if (result?.valid) validated.current = fingerprint;
-    setStatus(result?.valid ? 'valid' : result?.reason === 'rejected' ? 'rejected' : 'unreachable');
-  }, []);
-
-  return { status, setStatus, check };
-}
-
-function KeyStatusNote({ status }: { status: KeyStatus }) {
-  if (status === 'checking') {
-    return <p className="mt-1 text-[11px] text-muted-foreground">{i18n.t('settings.validatingKey')}</p>;
-  }
-  if (status === 'valid') {
-    return (
-      <p className="mt-1 text-[11px] flex items-center gap-1" style={{ color: 'var(--color-success)' }}>
-        <Check size={11} />
-        {i18n.t('settings.keyValid')}
-      </p>
-    );
-  }
-  if (status === 'rejected') {
-    return (
-      <p className="mt-1 text-[11px] text-destructive" role="alert">
-        {i18n.t('settings.keyInvalid')}
-      </p>
-    );
-  }
-  if (status === 'unreachable') {
-    return <p className="mt-1 text-[11px] text-muted-foreground">{i18n.t('settings.keyUnreachable')}</p>;
-  }
-  return null;
-}
 
 const FOOTER_PRESETS = () => [
   defaultFooterLine(),
@@ -377,6 +331,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
               </Button>
             </div>
             <KeyStatusNote status={aiKeyCheck.status} />
+            {aiKeyCheck.models && <ModelList models={aiKeyCheck.models} />}
             {!apiKey.trim() && (
               <p className="mt-1.5 flex items-start gap-1.5 text-[10px] text-destructive leading-relaxed" role="alert">
                 <TriangleAlert size={11} className="shrink-0 mt-0.5" />
@@ -574,6 +529,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
               </Button>
             </div>
             <KeyStatusNote status={voiceKeyCheck.status} />
+            {voiceKeyCheck.models && <ModelList models={voiceKeyCheck.models} />}
             {voiceKey.source === 'ai' && (
               <p className="mt-1.5 flex items-start gap-1.5 text-[10px] text-muted-foreground leading-relaxed">
                 <Sparkles size={11} className="shrink-0 mt-0.5 text-accent" />

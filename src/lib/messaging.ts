@@ -116,6 +116,7 @@ export interface ValidateApiKeyData {
 export interface ValidateApiKeyResponse {
   valid: boolean;
   reason?: 'rejected' | 'network';
+  models?: string[];
 }
 
 export interface EnterBlurModeResponse {

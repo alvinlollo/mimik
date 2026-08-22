@@ -1,6 +1,6 @@
 import { logger } from '@/lib/logger';
 
-export type KeyValidation = { valid: true } | { valid: false; reason: 'rejected' | 'network' };
+export type KeyValidation = { valid: true; models?: string[] } | { valid: false; reason: 'rejected' | 'network' };
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
@@ -38,6 +38,17 @@ function endpointUrl(provider: string, baseUrl?: string): string | null {
   return endpoint.url ?? null;
 }
 
+/** OpenAI, Anthropic and Groq all list models as `{ data: [{ id }] }`. */
+function parseModelIds(body: unknown): string[] | undefined {
+  if (typeof body !== 'object' || body === null) return undefined;
+  const data = (body as { data?: unknown }).data;
+  if (!Array.isArray(data)) return undefined;
+  const models = data
+    .map((entry) => (typeof entry === 'object' && entry !== null ? (entry as { id?: unknown }).id : undefined))
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+  return models.length > 0 ? models : undefined;
+}
+
 export async function validateApiKey(provider: string, apiKey: string, baseUrl?: string): Promise<KeyValidation> {
   const url = endpointUrl(provider, baseUrl);
   if (!url) {
@@ -49,7 +60,11 @@ export async function validateApiKey(provider: string, apiKey: string, baseUrl?:
       headers: ENDPOINTS[provider].headers(apiKey),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    if (res.ok) return { valid: true };
+    if (res.ok) {
+      const body = await res.json().catch(() => null);
+      const models = parseModelIds(body);
+      return models ? { valid: true, models } : { valid: true };
+    }
     if (res.status === 401 || res.status === 403) return { valid: false, reason: 'rejected' };
     return { valid: false, reason: 'network' };
   } catch (err) {
