@@ -38,6 +38,11 @@ function endpointUrl(provider: string, baseUrl?: string): string | null {
   return endpoint.url ?? null;
 }
 
+function compatibleChatUrl(baseUrl?: string): string | null {
+  const trimmed = baseUrl?.trim().replace(/\/+$/, '');
+  return trimmed ? `${trimmed}/chat/completions` : null;
+}
+
 /** OpenAI, Anthropic and Groq all list models as `{ data: [{ id }] }`. */
 function parseModelIds(body: unknown): string[] | undefined {
   if (typeof body !== 'object' || body === null) return undefined;
@@ -49,7 +54,58 @@ function parseModelIds(body: unknown): string[] | undefined {
   return models.length > 0 ? models : undefined;
 }
 
-export async function validateApiKey(provider: string, apiKey: string, baseUrl?: string): Promise<KeyValidation> {
+export async function validateApiKey(
+  provider: string,
+  apiKey: string,
+  baseUrl?: string,
+  model?: string,
+): Promise<KeyValidation> {
+  if (provider === 'openaiCompatible') {
+    const chatUrl = compatibleChatUrl(baseUrl);
+    const selectedModel = model?.trim();
+    if (!chatUrl || !selectedModel) {
+      logger.error('No API key validation endpoint or model for provider', provider);
+      return { valid: false, reason: 'network' };
+    }
+    try {
+      const probe = await fetch(chatUrl, {
+        method: 'POST',
+        headers: {
+          ...ENDPOINTS[provider].headers(apiKey),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: [{ role: 'user', content: 'Reply with OK.' }],
+          max_tokens: 8,
+          stream: false,
+        }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+      if (!probe.ok) {
+        if (probe.status === 401 || probe.status === 403) return { valid: false, reason: 'rejected' };
+        return { valid: false, reason: 'network' };
+      }
+
+      try {
+        const catalog = await fetch(endpointUrl(provider, baseUrl) as string, {
+          headers: ENDPOINTS[provider].headers(apiKey),
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+        if (catalog.ok) {
+          const models = parseModelIds(await catalog.json().catch(() => null));
+          return models ? { valid: true, models } : { valid: true };
+        }
+      } catch (err) {
+        logger.error('Compatible model catalog request failed', err);
+      }
+      return { valid: true };
+    } catch (err) {
+      logger.error('API key validation request failed', err);
+      return { valid: false, reason: 'network' };
+    }
+  }
+
   const url = endpointUrl(provider, baseUrl);
   if (!url) {
     logger.error('No API key validation endpoint for provider', provider);

@@ -111,6 +111,7 @@ export interface ValidateApiKeyData {
   provider: string;
   apiKey: string;
   baseUrl?: string;
+  model?: string;
 }
 
 export interface ValidateApiKeyResponse {

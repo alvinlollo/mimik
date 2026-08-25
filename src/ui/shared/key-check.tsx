@@ -10,15 +10,15 @@ export function useKeyCheck() {
   const [models, setModels] = useState<string[] | null>(null);
   const validated = useRef('');
 
-  const check = useCallback(async (provider: string, apiKey: string, baseUrl?: string) => {
-    const fingerprint = `${provider}:${apiKey}:${baseUrl ?? ''}`;
+  const check = useCallback(async (provider: string, apiKey: string, baseUrl?: string, model?: string) => {
+    const fingerprint = `${provider}:${apiKey}:${baseUrl ?? ''}:${model ?? ''}`;
     if (validated.current === fingerprint) {
       setStatus('valid');
       return;
     }
     setStatus('checking');
     setModels(null);
-    const result = await sendMessage('validateApiKey', { provider, apiKey, baseUrl }).catch(() => null);
+    const result = await sendMessage('validateApiKey', { provider, apiKey, baseUrl, model }).catch(() => null);
     if (result?.valid) validated.current = fingerprint;
     if (result?.valid && result.models?.length) setModels(result.models);
     setStatus(result?.valid ? 'valid' : result?.reason === 'rejected' ? 'rejected' : 'unreachable');

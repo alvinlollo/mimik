@@ -71,24 +71,69 @@ describe('validateApiKey', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('checks a compatible key against the stored base URL, not openai', async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve(null) });
-    expect(await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1')).toEqual({ valid: true });
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe('https://api.example.com/v1/models');
-    expect(init.headers.Authorization).toBe('Bearer sk-key');
+  it('rejects a compatible key when the chat probe returns 401', async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(url.endsWith('/models') ? { ok: true, status: 200 } : { ok: false, status: 401 }),
+    );
+    expect(
+      await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1', 'compatible-model'),
+    ).toEqual({
+      valid: false,
+      reason: 'rejected',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.com/v1/chat/completions');
   });
 
   it('strips trailing slashes from a compatible base URL', async () => {
     fetchMock.mockResolvedValue({ ok: true, status: 200, json: () => Promise.resolve(null) });
-    await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1///');
-    const [url] = fetchMock.mock.calls[0];
+    await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1///', 'compatible-model');
+    const [url] = fetchMock.mock.calls[1];
     expect(url).toBe('https://api.example.com/v1/models');
   });
 
   it('does not send a compatible key anywhere when no base URL is set', async () => {
-    expect(await validateApiKey('openaiCompatible', 'sk-key')).toEqual({ valid: false, reason: 'network' });
+    expect(await validateApiKey('openaiCompatible', 'sk-key', undefined, 'compatible-model')).toEqual({
+      valid: false,
+      reason: 'network',
+    });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('does not validate a compatible key when the model is empty', async () => {
+    expect(await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1', '  ')).toEqual({
+      valid: false,
+      reason: 'network',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('probes a compatible key with the selected model, then returns catalog models', async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.endsWith('/chat/completions')
+          ? { ok: true, status: 200 }
+          : { ok: true, status: 200, json: () => Promise.resolve({ data: [{ id: 'model-a' }, { id: 'model-b' }] }) },
+      ),
+    );
+    expect(await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1', 'selected-model')).toEqual({
+      valid: true,
+      models: ['model-a', 'model-b'],
+    });
+    const [probeUrl, probeInit] = fetchMock.mock.calls[0];
+    expect(probeUrl).toBe('https://api.example.com/v1/chat/completions');
+    expect(probeInit.method).toBe('POST');
+    expect(JSON.parse(probeInit.body)).toMatchObject({ model: 'selected-model', max_tokens: 8, stream: false });
+    expect(fetchMock.mock.calls[1][0]).toBe('https://api.example.com/v1/models');
+  });
+
+  it('keeps a compatible key valid when the catalog request fails', async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(url.endsWith('/chat/completions') ? { ok: true, status: 200 } : { ok: false, status: 500 }),
+    );
+    expect(await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1', 'selected-model')).toEqual({
+      valid: true,
+    });
   });
 
   it('returns the model ids a provider lists for the key', async () => {

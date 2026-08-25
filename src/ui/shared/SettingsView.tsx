@@ -324,7 +324,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
                 variant="outline"
                 size="sm"
                 disabled={!apiKey || aiKeyCheck.status === 'checking'}
-                onClick={() => void aiKeyCheck.check(provider, apiKey, baseUrl)}
+                onClick={() => void aiKeyCheck.check(provider, apiKey, baseUrl, model)}
                 className="h-8 shrink-0 rounded-lg bg-card text-[11px] font-semibold"
               >
                 {i18n.t('settings.checkKey')}

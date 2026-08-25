@@ -259,7 +259,7 @@ function AISetupStep({ onNext, onSkip, onBack, index, total }: StepProps) {
                 <button
                   type="button"
                   disabled={!apiKey || aiKeyCheck.status === 'checking'}
-                  onClick={() => void aiKeyCheck.check(provider, apiKey, baseUrl)}
+                  onClick={() => void aiKeyCheck.check(provider, apiKey, baseUrl, model)}
                   className="px-4 py-2 bg-card text-foreground border border-border rounded-lg font-semibold text-xs hover:border-accent hover:text-accent transition-colors disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {i18n.t('settings.checkKey')}
