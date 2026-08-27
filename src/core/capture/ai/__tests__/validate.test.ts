@@ -81,8 +81,9 @@ describe('validateApiKey', () => {
       valid: false,
       reason: 'rejected',
     });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.com/v1/chat/completions');
+    expect(fetchMock.mock.calls[1][0]).toBe('https://api.example.com/v1/models');
   });
 
   it('strips trailing slashes from a compatible base URL', async () => {
@@ -101,11 +102,65 @@ describe('validateApiKey', () => {
   });
 
   it('does not validate a compatible key when the model is empty', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ data: [{ id: 'discovered-model' }] }),
+    });
     expect(await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1', '  ')).toEqual({
       valid: false,
-      reason: 'network',
+      reason: 'model-required',
+      models: ['discovered-model'],
     });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.com/v1/models');
+  });
+
+  it('keeps a compatible key rejected when the catalog includes the selected model', async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.endsWith('/chat/completions')
+          ? { ok: false, status: 401 }
+          : { ok: true, status: 200, json: () => Promise.resolve({ data: [{ id: 'public-model' }] }) },
+      ),
+    );
+    expect(await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1', 'public-model')).toEqual({
+      valid: false,
+      reason: 'rejected',
+      models: ['public-model'],
+    });
+  });
+
+  it('classifies a rejected inference for a model absent from a successful catalog as model-invalid', async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.endsWith('/chat/completions')
+          ? { ok: false, status: 401 }
+          : { ok: true, status: 200, json: () => Promise.resolve({ data: [{ id: 'available-model' }] }) },
+      ),
+    );
+    expect(
+      await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1', '  missing-model  '),
+    ).toEqual({
+      valid: false,
+      reason: 'model-invalid',
+      models: ['available-model'],
+    });
+  });
+
+  it('classifies a network inference failure for a model absent from a successful catalog as model-invalid', async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.endsWith('/chat/completions')
+          ? { ok: false, status: 500 }
+          : { ok: true, status: 200, json: () => Promise.resolve({ data: [{ id: 'available-model' }] }) },
+      ),
+    );
+    expect(await validateApiKey('openaiCompatible', 'sk-key', 'https://api.example.com/v1', 'missing-model')).toEqual({
+      valid: false,
+      reason: 'model-invalid',
+      models: ['available-model'],
+    });
   });
 
   it('probes a compatible key with the selected model, then returns catalog models', async () => {

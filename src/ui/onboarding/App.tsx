@@ -149,24 +149,25 @@ function AISetupStep({ onNext, onSkip, onBack, index, total }: StepProps) {
     const nextModel = AI_PROVIDERS[newProvider].defaultModel;
     setProvider(newProvider);
     setModel(nextModel);
-    aiKeyCheck.setStatus(null);
+    aiKeyCheck.reset();
     void localStorage.set({ aiProvider: newProvider, aiModel: nextModel });
   };
 
   const handleModelChange = (nextModel: string) => {
     setModel(nextModel);
+    aiKeyCheck.reset();
     void localStorage.set({ aiModel: nextModel });
   };
 
   const handleApiKeyChange = (nextKey: string) => {
     setApiKey(nextKey);
-    aiKeyCheck.setStatus(null);
+    aiKeyCheck.reset();
     void localStorage.set({ aiApiKey: nextKey });
   };
 
   const handleBaseUrlChange = (nextUrl: string) => {
     setBaseUrl(nextUrl);
-    aiKeyCheck.setStatus(null);
+    aiKeyCheck.reset();
     void localStorage.set({ aiBaseUrl: nextUrl });
   };
 

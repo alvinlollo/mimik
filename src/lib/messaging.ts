@@ -116,7 +116,7 @@ export interface ValidateApiKeyData {
 
 export interface ValidateApiKeyResponse {
   valid: boolean;
-  reason?: 'rejected' | 'network';
+  reason?: 'rejected' | 'network' | 'model-required' | 'model-invalid';
   models?: string[];
 }
 
