@@ -7,5 +7,6 @@ export function createModel(provider: string, model: string, apiKey: string, bas
     const baseURL = baseUrl?.trim();
     return createOpenAI(baseURL ? { apiKey, baseURL } : { apiKey })(model);
   }
+  if (provider === 'deepseek') return createOpenAI({ apiKey, baseURL: 'https://api.deepseek.com', name: 'deepseek' })(model);
   return createOpenAI({ apiKey })(model);
 }

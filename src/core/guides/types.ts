@@ -59,7 +59,7 @@ export interface Screenshot {
 
 export interface Settings {
   aiApiKey: string;
-  aiProvider: 'openai' | 'anthropic' | 'openaiCompatible';
+  aiProvider: 'openai' | 'anthropic' | 'openaiCompatible' | 'deepseek';
   aiModel: string;
   aiBaseUrl?: string;
   voiceEnabled: boolean;

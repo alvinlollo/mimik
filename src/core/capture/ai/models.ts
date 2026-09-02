@@ -36,6 +36,15 @@ export const AI_PROVIDERS: Record<string, AIProviderConfig> = {
     models: [],
     baseUrl: true,
   },
+  deepseek: {
+    label: 'DeepSeek',
+    defaultModel: 'deepseek-v4-flash',
+    models: [
+      { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+      { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro' },
+      { id: 'deepseek-v4-flash-vision-exp', label: 'DeepSeek V4 Flash Vision Exp' },
+    ],
+  },
 };
 
 export type AIProviderKey = keyof typeof AI_PROVIDERS;

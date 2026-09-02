@@ -28,6 +28,10 @@ const ENDPOINTS: Record<string, { url?: string; baseUrl?: boolean; headers: (key
       baseUrl: true,
       headers: (key) => ({ Authorization: `Bearer ${key}` }),
     },
+    deepseek: {
+      url: 'https://api.deepseek.com/models',
+      headers: (key) => ({ Authorization: `Bearer ${key}` }),
+    },
   };
 
 function endpointUrl(provider: string, baseUrl?: string): string | null {
