@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { AI_PROVIDERS, CUSTOM_MODEL_VALUE, isCustomModel } from '../models';
 
-const LOCALES = ['en', 'de', 'es', 'fr', 'pt-BR'];
+const LOCALES = ['en', 'de', 'es', 'fr', 'pt-BR', 'zh-CN'];
 
 const MODEL_KEYS = ['settings.model', 'settings.modelCustom'];
 
