@@ -7,7 +7,6 @@ export interface AIProviderConfig {
   label: string;
   defaultModel: string;
   models: AIModelOption[];
-  /** Whether this provider uses a custom base URL (e.g. OpenAI-compatible endpoints). */
   baseUrl?: boolean;
 }
 
