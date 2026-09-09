@@ -1,8 +1,9 @@
+import { i18n } from '#imports';
 import { logger } from '@/lib/logger';
 import { sendMessage } from '@/lib/messaging';
 import { extractDOMContext } from '../dom/context';
 import { extractElementMeta, type FrozenRect, freezeRect } from '../dom/element-meta';
-import { getFieldLabel, getFieldValue } from '../dom/element-utils';
+import { getFieldLabel, getFieldValue, isSensitiveField } from '../dom/element-utils';
 
 export class InputSession {
   stepId: string | null = null;
@@ -36,8 +37,15 @@ export class InputSession {
   update(target: HTMLElement) {
     if (!this.stepId) return;
     this.atEvent = freezeRect(target);
+    const label = getFieldLabel(target);
+    if (isSensitiveField(target)) {
+      sendMessage('updateInputStep', { stepId: this.stepId, description: i18n.t('steps.typeSecret') }).catch((err) =>
+        logger.warn('Failed to update input step', err),
+      );
+      return;
+    }
     const val = getFieldValue(target);
-    const desc = val ? `Type "${val}" in ${getFieldLabel(target)}` : `Clear ${getFieldLabel(target)}`;
+    const desc = val ? `Type "${val}" in ${label}` : `Clear ${label}`;
     sendMessage('updateInputStep', { stepId: this.stepId, description: desc, inputValue: val || undefined }).catch(
       (err) => logger.warn('Failed to update input step', err),
     );
