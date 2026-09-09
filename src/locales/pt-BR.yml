@@ -456,6 +456,7 @@ steps:
   click: "Clicar em $1"
   typeIntoField: "Digitar no campo $1 $2"
   typeInto: "Digitar em $1"
+  typeSecret: "Digitar senha"
   copyFrom: "Copiar de $1"
   pasteInto: "Colar em $1"
   cutFrom: "Recortar de $1"

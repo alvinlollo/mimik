@@ -1,4 +1,5 @@
 import { browser } from '#imports';
+import { isSensitiveField } from '@/core/capture/dom/element-utils';
 import type { Step } from '@/core/guides/types';
 import { logger } from '@/lib/logger';
 import { sendMessage } from '@/lib/messaging';
@@ -107,6 +108,12 @@ export class GuideMeController {
 
   private setupActionDetection(step: Step, target: HTMLElement) {
     this.currentTarget = target;
+
+    if (step.action === 'input' && isSensitiveField(target)) {
+      this.clickHandler = () => this.advanceStep();
+      target.addEventListener('change', this.clickHandler, { once: true });
+      return;
+    }
 
     if (step.action === 'input' && step.inputValue) {
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
