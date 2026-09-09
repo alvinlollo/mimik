@@ -363,6 +363,10 @@ exportPreview:
   stepDescriptions: "Textos da etapa"
   stepDescriptionsHint: "Desenhar o texto da etapa em cada quadro"
   resolution: "Qualidade do vídeo"
+  gifQuality: "Qualidade do GIF"
+  gif_low: "Baixa"
+  gif_medium: "Média"
+  gif_high: "Alta"
   res_720p: "720p"
   res_1080p: "1080p"
   title: "Prévia da exportação"
@@ -396,6 +400,7 @@ exportMenu:
   html: HTML
   markdown: Markdown
   pdf: PDF
+  gif: GIF
   video: Vídeo
   cancelProgress: "Cancelar · $1%"
 
