@@ -65,6 +65,10 @@ export function isSensitiveField(el: Element | null): boolean {
   return el instanceof HTMLInputElement && el.type === 'password';
 }
 
+export function isRedactedField(el: Element | null): boolean {
+  return el instanceof Element && !!el.closest('[data-mimik-blur]');
+}
+
 export function eventTarget(e: Event): Element | null {
   const inner = e.composedPath?.()[0];
   if (inner instanceof Element) return inner;

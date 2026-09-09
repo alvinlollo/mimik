@@ -1,5 +1,4 @@
 import { browser } from '#imports';
-import { isSensitiveField } from '@/core/capture/dom/element-utils';
 import type { Step } from '@/core/guides/types';
 import { logger } from '@/lib/logger';
 import { sendMessage } from '@/lib/messaging';
@@ -15,6 +14,7 @@ export class GuideMeController {
   private overlay: GuideMeOverlay | null = null;
   private storageListener: ((changes: Record<string, { newValue?: unknown }>) => void) | null = null;
   private clickHandler: ((e: Event) => void) | null = null;
+  private clickEvent: 'click' | 'change' = 'click';
   private currentTarget: HTMLElement | null = null;
   private currentStepIndex = -1;
   private watchTimer: ReturnType<typeof setInterval> | null = null;
@@ -109,8 +109,9 @@ export class GuideMeController {
   private setupActionDetection(step: Step, target: HTMLElement) {
     this.currentTarget = target;
 
-    if (step.action === 'input' && isSensitiveField(target)) {
+    if (step.action === 'input' && !step.inputValue) {
       this.clickHandler = () => this.advanceStep();
+      this.clickEvent = 'change';
       target.addEventListener('change', this.clickHandler, { once: true });
       return;
     }
@@ -132,6 +133,7 @@ export class GuideMeController {
     }
 
     this.clickHandler = () => this.advanceStep();
+    this.clickEvent = 'click';
     target.addEventListener('click', this.clickHandler, { once: true });
   }
 
@@ -143,7 +145,7 @@ export class GuideMeController {
 
   private removeActionDetection() {
     if (this.clickHandler && this.currentTarget) {
-      this.currentTarget.removeEventListener('click', this.clickHandler);
+      this.currentTarget.removeEventListener(this.clickEvent, this.clickHandler);
     }
     this.clickHandler = null;
     this.currentTarget = null;
