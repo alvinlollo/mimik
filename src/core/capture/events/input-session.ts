@@ -3,7 +3,7 @@ import { logger } from '@/lib/logger';
 import { sendMessage } from '@/lib/messaging';
 import { extractDOMContext } from '../dom/context';
 import { extractElementMeta, type FrozenRect, freezeRect } from '../dom/element-meta';
-import { getFieldLabel, getFieldValue, isSensitiveField } from '../dom/element-utils';
+import { getFieldLabel, getFieldValue, isRedactedField, isSensitiveField } from '../dom/element-utils';
 
 export class InputSession {
   stepId: string | null = null;
@@ -38,8 +38,9 @@ export class InputSession {
     if (!this.stepId) return;
     this.atEvent = freezeRect(target);
     const label = getFieldLabel(target);
-    if (isSensitiveField(target)) {
-      sendMessage('updateInputStep', { stepId: this.stepId, description: i18n.t('steps.typeSecret') }).catch((err) =>
+    if (isSensitiveField(target) || isRedactedField(target)) {
+      const description = isSensitiveField(target) ? i18n.t('steps.typeSecret') : i18n.t('steps.typeInto', [label]);
+      sendMessage('updateInputStep', { stepId: this.stepId, description }).catch((err) =>
         logger.warn('Failed to update input step', err),
       );
       return;
