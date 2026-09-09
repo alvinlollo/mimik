@@ -19,7 +19,7 @@ describe('useKeyCheck', () => {
     const { result } = renderHook(() => useKeyCheck());
 
     await act(async () => {
-      await result.current.check('openaiCompatible', 'sk-key', 'https://api.example.com/v1', 'selected-model');
+      await result.current.check('openai', 'sk-key', 'https://api.example.com/v1', 'selected-model');
     });
 
     expect(result.current.status).toBe('rejected');
@@ -31,7 +31,7 @@ describe('useKeyCheck', () => {
     const { result } = renderHook(() => useKeyCheck());
 
     await act(async () => {
-      await result.current.check('openaiCompatible', 'sk-key', 'https://api.example.com/v1', 'missing-model');
+      await result.current.check('openai', 'sk-key', 'https://api.example.com/v1', 'missing-model');
     });
 
     expect(result.current.status).toBe('model-invalid');
@@ -43,7 +43,7 @@ describe('useKeyCheck', () => {
     const { result } = renderHook(() => useKeyCheck());
 
     await act(async () => {
-      await result.current.check('openaiCompatible', 'sk-key', 'https://api.example.com/v1');
+      await result.current.check('openai', 'sk-key', 'https://api.example.com/v1');
       result.current.reset();
     });
 

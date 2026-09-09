@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger';
+import { DEFAULT_OPENAI_BASE_URL } from './models';
 
 export type KeyValidation =
   | { valid: true; models?: string[] }
@@ -6,50 +7,39 @@ export type KeyValidation =
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
-const ENDPOINTS: Record<string, { url?: string; baseUrl?: boolean; headers: (key: string) => Record<string, string> }> =
-  {
-    openai: {
-      url: 'https://api.openai.com/v1/models',
-      headers: (key) => ({ Authorization: `Bearer ${key}` }),
-    },
-    anthropic: {
-      url: 'https://api.anthropic.com/v1/models',
-      headers: (key) => ({
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      }),
-    },
-    groq: {
-      url: 'https://api.groq.com/openai/v1/models',
-      headers: (key) => ({ Authorization: `Bearer ${key}` }),
-    },
-    openaiCompatible: {
-      baseUrl: true,
-      headers: (key) => ({ Authorization: `Bearer ${key}` }),
-    },
-    deepseek: {
-      url: 'https://api.deepseek.com/models',
-      headers: (key) => ({ Authorization: `Bearer ${key}` }),
-    },
-  };
-
-function endpointUrl(provider: string, baseUrl?: string): string | null {
-  const endpoint = ENDPOINTS[provider];
-  if (!endpoint) return null;
-  if (endpoint.baseUrl) {
-    const trimmed = baseUrl?.trim().replace(/\/+$/, '');
-    return trimmed ? `${trimmed}/models` : null;
-  }
-  return endpoint.url ?? null;
+function normalizeUrl(url: string): string {
+  return url.trim().replace(/\/+$/, '');
 }
 
-function compatibleChatUrl(baseUrl?: string): string | null {
-  const trimmed = baseUrl?.trim().replace(/\/+$/, '');
-  return trimmed ? `${trimmed}/chat/completions` : null;
+function isOpenAIEndpoint(baseUrl?: string): boolean {
+  if (!baseUrl?.trim()) return true;
+  return normalizeUrl(baseUrl) === normalizeUrl(DEFAULT_OPENAI_BASE_URL);
 }
 
-/** OpenAI, Anthropic and Groq all list models as `{ data: [{ id }] }`. */
+const ENDPOINTS: Record<string, { url?: string; headers: (key: string) => Record<string, string> }> = {
+  openai: {
+    url: 'https://api.openai.com/v1/models',
+    headers: (key) => ({ Authorization: `Bearer ${key}` }),
+  },
+  anthropic: {
+    url: 'https://api.anthropic.com/v1/models',
+    headers: (key) => ({
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    }),
+  },
+  groq: {
+    url: 'https://api.groq.com/openai/v1/models',
+    headers: (key) => ({ Authorization: `Bearer ${key}` }),
+  },
+  deepseek: {
+    url: 'https://api.deepseek.com/models',
+    headers: (key) => ({ Authorization: `Bearer ${key}` }),
+  },
+};
+
+/** OpenAI, Anthropic, Groq and DeepSeek all list models as `{ data: [{ id }] }`. */
 function parseModelIds(body: unknown): string[] | undefined {
   if (typeof body !== 'object' || body === null) return undefined;
   const data = (body as { data?: unknown }).data;
@@ -60,20 +50,41 @@ function parseModelIds(body: unknown): string[] | undefined {
   return models.length > 0 ? models : undefined;
 }
 
-async function fetchCompatibleModels(apiKey: string, baseUrl?: string): Promise<string[] | undefined> {
-  const url = endpointUrl('openaiCompatible', baseUrl);
-  if (!url) return undefined;
-
+async function fetchModelsFromUrl(url: string, headers: Record<string, string>): Promise<string[] | undefined> {
   try {
-    const catalog = await fetch(url, {
-      headers: ENDPOINTS.openaiCompatible.headers(apiKey),
+    const res = await fetch(url, {
+      headers,
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
-    if (!catalog.ok) return undefined;
-    return parseModelIds(await catalog.json().catch(() => null));
+    if (!res.ok) return undefined;
+    return parseModelIds(await res.json().catch(() => null));
   } catch (err) {
-    logger.error('Compatible model catalog request failed', err);
+    logger.error('Model catalog request failed', err);
     return undefined;
+  }
+}
+
+async function probeWithChatCompletion(
+  baseUrl: string,
+  model: string,
+  headers: Record<string, string>,
+): Promise<boolean> {
+  try {
+    const chatUrl = `${normalizeUrl(baseUrl)}/chat/completions`;
+    const res = await fetch(chatUrl, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: 'Reply with OK.' }],
+        max_tokens: 8,
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 
@@ -83,64 +94,49 @@ export async function validateApiKey(
   baseUrl?: string,
   model?: string,
 ): Promise<KeyValidation> {
-  if (provider === 'openaiCompatible') {
-    const chatUrl = compatibleChatUrl(baseUrl);
-    const catalogUrl = endpointUrl(provider, baseUrl);
-    const selectedModel = model?.trim();
-    if (!chatUrl || !catalogUrl) {
-      logger.error('No API key validation endpoint or model for provider', provider);
+  // --- OpenAI with custom base URL (inference probe) ---
+  if (provider === 'openai' && !isOpenAIEndpoint(baseUrl)) {
+    const trimmedBase = baseUrl?.trim();
+    if (!trimmedBase) {
+      logger.error('OpenAI provider with no base URL');
       return { valid: false, reason: 'network' };
     }
 
+    const headers = { Authorization: `Bearer ${apiKey}` };
+
+    // If no model selected, try to list models first
+    const selectedModel = model?.trim();
     if (!selectedModel) {
-      const models = await fetchCompatibleModels(apiKey, baseUrl);
+      const models = await fetchModelsFromUrl(`${normalizeUrl(trimmedBase)}/models`, headers);
       return models ? { valid: false, reason: 'model-required', models } : { valid: false, reason: 'model-required' };
     }
 
-    let result: KeyValidation;
-    try {
-      const probe = await fetch(chatUrl, {
-        method: 'POST',
-        headers: {
-          ...ENDPOINTS[provider].headers(apiKey),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: [{ role: 'user', content: 'Reply with OK.' }],
-          max_tokens: 8,
-          stream: false,
-        }),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-      if (!probe.ok) {
-        result =
-          probe.status === 401 || probe.status === 403
-            ? { valid: false, reason: 'rejected' }
-            : { valid: false, reason: 'network' };
-      } else {
-        result = { valid: true };
+    // Probe with a minimal chat completion
+    const probeOk = await probeWithChatCompletion(trimmedBase, selectedModel, headers);
+    if (!probeOk) {
+      // Check if model is in the catalog to distinguish bad model from bad key
+      const models = await fetchModelsFromUrl(`${normalizeUrl(trimmedBase)}/models`, headers);
+      if (models && !models.includes(selectedModel)) {
+        return { valid: false, reason: 'model-invalid', models };
       }
-    } catch (err) {
-      logger.error('API key validation request failed', err);
-      result = { valid: false, reason: 'network' };
+      return { valid: false, reason: 'rejected' };
     }
 
-    const models = await fetchCompatibleModels(apiKey, baseUrl);
-    if (!result.valid && models && !models.includes(selectedModel)) {
-      return { valid: false, reason: 'model-invalid', models };
-    }
-    return models ? { ...result, models } : result;
+    // Key is valid — also fetch model list
+    const models = await fetchModelsFromUrl(`${normalizeUrl(trimmedBase)}/models`, headers);
+    return models ? { valid: true, models } : { valid: true };
   }
 
-  const url = endpointUrl(provider, baseUrl);
+  // --- Standard provider validation (list models endpoint) ---
+  const endpoint = ENDPOINTS[provider];
+  const url = endpoint?.url ?? null;
   if (!url) {
     logger.error('No API key validation endpoint for provider', provider);
     return { valid: false, reason: 'network' };
   }
   try {
     const res = await fetch(url, {
-      headers: ENDPOINTS[provider].headers(apiKey),
+      headers: endpoint.headers(apiKey),
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (res.ok) {

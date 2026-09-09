@@ -1,8 +1,14 @@
-import { Globe, Mic, MousePointerClick, Shield } from 'lucide-react';
+import { ChevronDown, Globe, Mic, MousePointerClick, Shield } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { browser, i18n } from '#imports';
 import { PRESET_LABELS, type PresetKey } from '@/core/blur/regexes';
-import { AI_PROVIDERS, type AIProviderKey } from '@/core/capture/ai/models';
+import {
+  AI_PROVIDERS,
+  type AIProviderKey,
+  CUSTOM_MODEL_VALUE,
+  DEFAULT_OPENAI_BASE_URL,
+  isCustomModel,
+} from '@/core/capture/ai/models';
 import { AI_LANGUAGES, type AILanguageCode } from '@/core/capture/ai/prompts';
 import type { VoiceProvider } from '@/core/capture/voice/transcribe';
 import { localStorage, openSidebar, requestHostPermissions } from '@/lib/browser-api';
@@ -121,6 +127,8 @@ function AISetupStep({ onNext, onSkip, onBack, index, total }: StepProps) {
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [aiLanguage, setAiLanguage] = useState<AILanguageCode>('en');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [customModel, setCustomModel] = useState(false);
   const aiKeyCheck = useKeyCheck();
 
   useEffect(() => {
@@ -144,16 +152,25 @@ function AISetupStep({ onNext, onSkip, onBack, index, total }: StepProps) {
   }, []);
 
   const providerConfig = AI_PROVIDERS[provider];
+  const usingCustomModel = customModel || isCustomModel(model, providerConfig);
 
   const handleProviderChange = (newProvider: AIProviderKey) => {
     const nextModel = AI_PROVIDERS[newProvider].defaultModel;
     setProvider(newProvider);
     setModel(nextModel);
+    setCustomModel(false);
     aiKeyCheck.reset();
     void localStorage.set({ aiProvider: newProvider, aiModel: nextModel });
   };
 
   const handleModelChange = (nextModel: string) => {
+    if (nextModel === CUSTOM_MODEL_VALUE) {
+      setCustomModel(true);
+      setModel('');
+      aiKeyCheck.reset();
+      return;
+    }
+    setCustomModel(false);
     setModel(nextModel);
     aiKeyCheck.reset();
     void localStorage.set({ aiModel: nextModel });
@@ -207,45 +224,32 @@ function AISetupStep({ onNext, onSkip, onBack, index, total }: StepProps) {
 
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">{i18n.t('settings.model')}</label>
-              {providerConfig.baseUrl ? (
+              <Select value={usingCustomModel ? CUSTOM_MODEL_VALUE : model} onValueChange={handleModelChange}>
+                <SelectTrigger className="w-full rounded-xl px-4 py-2.5 text-sm focus:border-accent focus:ring-accent/10">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {providerConfig.models.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {usingCustomModel && (
                 <Input
                   type="text"
                   value={model}
-                  onChange={(e) => handleModelChange(e.target.value)}
+                  onChange={(e) => {
+                    setModel(e.target.value);
+                    aiKeyCheck.reset();
+                    void localStorage.set({ aiModel: e.target.value });
+                  }}
                   placeholder={providerConfig.defaultModel}
-                  className="w-full rounded-xl px-4 py-2.5 text-sm focus:border-accent focus:ring-accent/10"
+                  className="w-full mt-1.5 rounded-xl px-4 py-2.5 text-sm focus:border-accent focus:ring-accent/10"
                 />
-              ) : (
-                <Select value={model} onValueChange={handleModelChange}>
-                  <SelectTrigger className="w-full rounded-xl px-4 py-2.5 text-sm focus:border-accent focus:ring-accent/10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {providerConfig.models.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               )}
             </div>
-
-            {providerConfig.baseUrl && (
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1.5">
-                  <Globe size={11} className="inline mr-1 -mt-px" />
-                  {i18n.t('settings.baseUrl')}
-                </label>
-                <Input
-                  type="text"
-                  value={baseUrl}
-                  onChange={(e) => handleBaseUrlChange(e.target.value)}
-                  placeholder="https://api.example.com/v1"
-                  className="w-full rounded-xl px-4 py-2.5 text-sm focus:border-accent focus:ring-accent/10"
-                />
-              </div>
-            )}
 
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">{i18n.t('settings.apiKey')}</label>
@@ -260,7 +264,9 @@ function AISetupStep({ onNext, onSkip, onBack, index, total }: StepProps) {
                 <button
                   type="button"
                   disabled={!apiKey || aiKeyCheck.status === 'checking'}
-                  onClick={() => void aiKeyCheck.check(provider, apiKey, baseUrl, model)}
+                  onClick={() => {
+                    if (aiKeyCheck.status !== 'checking') void aiKeyCheck.check(provider, apiKey, baseUrl, model);
+                  }}
                   className="px-4 py-2 bg-card text-foreground border border-border rounded-lg font-semibold text-xs hover:border-accent hover:text-accent transition-colors disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {i18n.t('settings.checkKey')}
@@ -271,6 +277,40 @@ function AISetupStep({ onNext, onSkip, onBack, index, total }: StepProps) {
               </div>
               {aiKeyCheck.models && <ModelList models={aiKeyCheck.models} />}
             </div>
+
+            {providerConfig.baseUrl && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setAdvancedOpen((v) => !v)}
+                  className="flex items-center gap-1 text-xs font-semibold text-accent hover:text-foreground transition-colors py-0.5"
+                >
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform duration-200 ${advancedOpen ? 'rotate-180' : ''}`}
+                  />
+                  Advanced
+                </button>
+                {advancedOpen && (
+                  <div className="mt-2 space-y-2">
+                    <label className="block text-xs font-semibold text-foreground mb-1.5">
+                      <Globe size={11} className="inline mr-1 -mt-px" />
+                      {i18n.t('settings.baseUrl')}
+                    </label>
+                    <Input
+                      type="text"
+                      value={baseUrl}
+                      onChange={(e) => handleBaseUrlChange(e.target.value)}
+                      placeholder={DEFAULT_OPENAI_BASE_URL}
+                      className="w-full rounded-xl px-4 py-2.5 text-sm focus:border-accent focus:ring-accent/10"
+                    />
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      Custom endpoint for OpenAI-compatible APIs. Leave empty for the default.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-semibold text-foreground mb-1.5">

@@ -42,9 +42,9 @@ describe('isCustomModel', () => {
 });
 
 describe('custom model sentinel', () => {
-  it('never collides with a real model id', () => {
+  it('is present in every provider as a selectable option', () => {
     for (const config of Object.values(AI_PROVIDERS)) {
-      expect(config.models.some((option) => option.id === CUSTOM_MODEL_VALUE)).toBe(false);
+      expect(config.models.some((option) => option.id === CUSTOM_MODEL_VALUE)).toBe(true);
     }
   });
 
@@ -55,24 +55,26 @@ describe('custom model sentinel', () => {
 
 describe('every provider default is selectable', () => {
   it.each(Object.entries(AI_PROVIDERS))('%s lists its own default model', (_key, config) => {
-    if (!config.baseUrl) {
-      expect(config.models.some((option) => option.id === config.defaultModel)).toBe(true);
-    }
+    // Providers with baseUrl (like OpenAI) have the default model in their list
+    expect(config.models.some((option) => option.id === config.defaultModel)).toBe(true);
   });
 });
 
-describe('openaiCompatible provider', () => {
-  it('opts into a base URL and a free-text model', () => {
-    const config = AI_PROVIDERS.openaiCompatible;
+describe('OpenAI provider has base URL support', () => {
+  it('opts into a base URL', () => {
+    const config = AI_PROVIDERS.openai;
     expect(config.baseUrl).toBe(true);
-    expect(isCustomModel('llama3:70b', config)).toBe(true);
-    expect(isCustomModel('', config)).toBe(false);
   });
 
   it('carries the base URL label in every locale', () => {
     for (const locale of LOCALES) {
       expect(localeKeys(locale).has('settings.baseUrl')).toBe(true);
     }
+  });
+
+  it('includes a Custom model option', () => {
+    const config = AI_PROVIDERS.openai;
+    expect(config.models.some((m) => m.id === CUSTOM_MODEL_VALUE)).toBe(true);
   });
 });
 

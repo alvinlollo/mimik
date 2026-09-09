@@ -18,7 +18,13 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { i18n } from '#imports';
 import { PRESET_LABELS, type PresetKey } from '@/core/blur/regexes';
-import { AI_PROVIDERS, type AIProviderKey, CUSTOM_MODEL_VALUE, isCustomModel } from '@/core/capture/ai/models';
+import {
+  AI_PROVIDERS,
+  type AIProviderKey,
+  CUSTOM_MODEL_VALUE,
+  DEFAULT_OPENAI_BASE_URL,
+  isCustomModel,
+} from '@/core/capture/ai/models';
 import { AI_LANGUAGES, type AILanguageCode } from '@/core/capture/ai/prompts';
 import { resolveVoiceApiKey } from '@/core/capture/voice/api-key';
 import type { VoiceProvider } from '@/core/capture/voice/transcribe';
@@ -57,6 +63,7 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
   const aiKeyCheck = useKeyCheck();
   const voiceKeyCheck = useKeyCheck();
   const [customModel, setCustomModel] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const savedSnapshot = useRef<SettingsSnapshot | null>(null);
   const pending = useRef<SettingsSnapshot>({});
@@ -275,7 +282,6 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
                     {m.label}
                   </SelectItem>
                 ))}
-                <SelectItem value={CUSTOM_MODEL_VALUE}>{i18n.t('settings.modelCustom')}</SelectItem>
               </SelectContent>
             </Select>
             {usingCustomModel && (
@@ -291,26 +297,6 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
               />
             )}
           </div>
-
-          {providerConfig.baseUrl && (
-            <div>
-              <label className="block text-[11px] font-semibold text-foreground mb-1">
-                <Globe size={11} className="inline mr-1 -mt-px" />
-                {i18n.t('settings.baseUrl')}
-              </label>
-              <Input
-                type="text"
-                value={baseUrl}
-                onChange={(e) => {
-                  setBaseUrl(e.target.value);
-                  aiKeyCheck.reset();
-                }}
-                placeholder="https://api.example.com/v1"
-                aria-label={i18n.t('settings.baseUrl')}
-                className="h-8 text-[12px] rounded-lg border-border"
-              />
-            </div>
-          )}
 
           <div>
             <label className="block text-[11px] font-semibold text-foreground mb-1">{i18n.t('settings.apiKey')}</label>
@@ -329,7 +315,9 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
                 variant="outline"
                 size="sm"
                 disabled={!apiKey || aiKeyCheck.status === 'checking'}
-                onClick={() => void aiKeyCheck.check(provider, apiKey, baseUrl, model)}
+                onClick={() => {
+                  if (aiKeyCheck.status !== 'checking') void aiKeyCheck.check(provider, apiKey, baseUrl, model);
+                }}
                 className="h-8 shrink-0 rounded-lg bg-card text-[11px] font-semibold"
               >
                 {i18n.t('settings.checkKey')}
@@ -344,6 +332,44 @@ export default function SettingsView({ onBack }: SettingsViewProps) {
               </p>
             )}
           </div>
+
+          {providerConfig.baseUrl && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen((v) => !v)}
+                className="flex items-center gap-1 text-[11px] font-semibold text-accent hover:text-foreground transition-colors py-0.5"
+              >
+                <ChevronDown
+                  size={12}
+                  className={`transition-transform duration-200 ${advancedOpen ? 'rotate-180' : ''}`}
+                />
+                Advanced
+              </button>
+              {advancedOpen && (
+                <div className="mt-2 space-y-2">
+                  <label className="block text-[11px] font-semibold text-foreground mb-1">
+                    <Globe size={11} className="inline mr-1 -mt-px" />
+                    {i18n.t('settings.baseUrl')}
+                  </label>
+                  <Input
+                    type="text"
+                    value={baseUrl}
+                    onChange={(e) => {
+                      setBaseUrl(e.target.value);
+                      aiKeyCheck.reset();
+                    }}
+                    placeholder={DEFAULT_OPENAI_BASE_URL}
+                    aria-label={i18n.t('settings.baseUrl')}
+                    className="h-8 text-[12px] rounded-lg border-border"
+                  />
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    Custom endpoint for OpenAI-compatible APIs. Leave empty for the default.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-[11px] font-semibold text-foreground mb-1">
