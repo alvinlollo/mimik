@@ -294,6 +294,10 @@ exportPreview:
   stepDescriptions: "Schritttexte"
   stepDescriptionsHint: "Den Schritttext in jedes Videobild einzeichnen"
   resolution: "Videoqualität"
+  gifQuality: "GIF-Qualität"
+  gif_low: "Niedrig"
+  gif_medium: "Mittel"
+  gif_high: "Hoch"
   res_720p: "720p"
   res_1080p: "1080p"
   title: "Export-Vorschau"
@@ -327,6 +331,7 @@ exportMenu:
   html: HTML
   markdown: Markdown
   pdf: PDF
+  gif: GIF
   video: Video
   cancelProgress: "Abbrechen · $1 %"
 

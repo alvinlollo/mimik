@@ -363,6 +363,10 @@ exportPreview:
   stepDescriptions: "Textos de paso"
   stepDescriptionsHint: "Dibujar el texto del paso en cada fotograma"
   resolution: "Calidad de vídeo"
+  gifQuality: "Calidad del GIF"
+  gif_low: "Baja"
+  gif_medium: "Media"
+  gif_high: "Alta"
   res_720p: "720p"
   res_1080p: "1080p"
   title: "Vista previa de exportación"
@@ -396,6 +400,7 @@ exportMenu:
   html: HTML
   markdown: Markdown
   pdf: PDF
+  gif: GIF
   video: Vídeo
   cancelProgress: "Cancelar · $1 %"
 
