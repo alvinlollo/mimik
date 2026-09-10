@@ -44,6 +44,8 @@ describe('isCustomModel', () => {
 describe('custom model sentinel', () => {
   it('is present in every provider as a selectable option', () => {
     for (const config of Object.values(AI_PROVIDERS)) {
+      // Providers with an empty model list fetch models dynamically
+      if (config.models.length === 0) continue;
       expect(config.models.some((option) => option.id === CUSTOM_MODEL_VALUE)).toBe(true);
     }
   });
@@ -55,7 +57,8 @@ describe('custom model sentinel', () => {
 
 describe('every provider default is selectable', () => {
   it.each(Object.entries(AI_PROVIDERS))('%s lists its own default model', (_key, config) => {
-    // Providers with baseUrl (like OpenAI) have the default model in their list
+    // Providers with an empty model list fetch models dynamically at runtime
+    if (config.models.length === 0) return;
     expect(config.models.some((option) => option.id === config.defaultModel)).toBe(true);
   });
 });

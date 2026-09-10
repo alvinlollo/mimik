@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { fetchMock } = vi.hoisted(() => {
   const fn = vi.fn<(url: string | URL | Request, init?: RequestInit) => Promise<Response>>();
@@ -27,6 +27,10 @@ function chatOkBody() {
 }
 
 describe('validateApiKey', () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+  });
+
   it('returns valid for a good key', async () => {
     fetchMock.mockResolvedValueOnce(modelsBody('gpt-4o-mini'));
     expect(await validateApiKey('openai', 'sk-good')).toEqual({ valid: true, models: ['gpt-4o-mini'] });
@@ -63,23 +67,23 @@ describe('validateApiKey', () => {
   });
 
   it('checks a groq key against groq, not openai', async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 200 });
-    expect(await validateApiKey('groq', 'gsk-key')).toEqual({ valid: true });
+    fetchMock.mockResolvedValueOnce(modelsBody('ok-model'));
+    expect(await validateApiKey('groq', 'gsk-key')).toEqual({ valid: true, models: ['ok-model'] });
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('https://api.groq.com/openai/v1/models');
     expect(init.headers.Authorization).toBe('Bearer gsk-key');
   });
 
   it('checks a deepseek key against deepseek, not openai', async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 200 });
-    expect(await validateApiKey('deepseek', 'sk-deepseek')).toEqual({ valid: true });
+    fetchMock.mockResolvedValueOnce(modelsBody('deepseek-v4-flash'));
+    expect(await validateApiKey('deepseek', 'sk-deepseek')).toEqual({ valid: true, models: ['deepseek-v4-flash'] });
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('https://api.deepseek.com/models');
     expect(init.headers.Authorization).toBe('Bearer sk-deepseek');
   });
 
   it('gives up rather than spinning forever when a host never answers', async () => {
-    fetchMock.mockResolvedValue({ ok: true, status: 200 });
+    fetchMock.mockResolvedValueOnce(jsonResponse(null));
     await validateApiKey('openai', 'sk-key');
     const [, init] = fetchMock.mock.calls[0];
     expect(init.signal).toBeInstanceOf(AbortSignal);
