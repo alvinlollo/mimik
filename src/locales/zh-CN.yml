@@ -367,6 +367,10 @@ exportPreview:
   stepDescriptions: "步骤说明"
   stepDescriptionsHint: "将步骤文字绘制到每一帧视频中"
   resolution: "视频质量"
+  gifQuality: "GIF 质量"
+  gif_low: "低"
+  gif_medium: "中"
+  gif_high: "高"
   res_720p: "720p"
   res_1080p: "1080p"
   title: "导出预览"
@@ -400,6 +404,7 @@ exportMenu:
   html: HTML
   markdown: Markdown
   pdf: PDF
+  gif: GIF
   video: 视频
   cancelProgress: "取消 · $1%"
 
@@ -460,6 +465,7 @@ steps:
   click: "点击 $1"
   typeIntoField: "在 $1 字段中输入 $2"
   typeInto: "在 $1 中输入"
+  typeSecret: "输入密码"
   copyFrom: "从 $1 复制"
   pasteInto: "粘贴到 $1"
   cutFrom: "从 $1 剪切"

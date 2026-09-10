@@ -367,6 +367,10 @@ exportPreview:
   stepDescriptions: "Textes d'étape"
   stepDescriptionsHint: "Incruster le texte de l'étape sur chaque image"
   resolution: "Qualité vidéo"
+  gifQuality: "Qualité du GIF"
+  gif_low: "Basse"
+  gif_medium: "Moyenne"
+  gif_high: "Haute"
   res_720p: "720p"
   res_1080p: "1080p"
   title: "Aperçu de l’export"
@@ -400,6 +404,7 @@ exportMenu:
   html: HTML
   markdown: Markdown
   pdf: PDF
+  gif: GIF
   video: Vidéo
   cancelProgress: "Annuler · $1 %"
 
@@ -460,6 +465,7 @@ steps:
   click: "Cliquer sur $1"
   typeIntoField: "Saisir dans le champ $1 $2"
   typeInto: "Saisir dans $1"
+  typeSecret: "Saisir le mot de passe"
   copyFrom: "Copier depuis $1"
   pasteInto: "Coller dans $1"
   cutFrom: "Couper depuis $1"

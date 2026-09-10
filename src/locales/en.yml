@@ -367,6 +367,10 @@ exportPreview:
   stepDescriptions: "Step captions"
   stepDescriptionsHint: "Draw the step text onto each video frame"
   resolution: "Video quality"
+  gifQuality: "GIF quality"
+  gif_low: "Low"
+  gif_medium: "Medium"
+  gif_high: "High"
   res_720p: "720p"
   res_1080p: "1080p"
   title: "Export preview"
@@ -400,6 +404,7 @@ exportMenu:
   html: HTML
   markdown: Markdown
   pdf: PDF
+  gif: GIF
   video: Video
   cancelProgress: "Cancel · $1%"
 
@@ -460,6 +465,7 @@ steps:
   click: "Click $1"
   typeIntoField: "Type into $1 field $2"
   typeInto: "Type into $1"
+  typeSecret: "Type password"
   copyFrom: "Copy from $1"
   pasteInto: "Paste into $1"
   cutFrom: "Cut from $1"
