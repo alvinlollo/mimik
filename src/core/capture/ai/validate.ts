@@ -39,7 +39,6 @@ const ENDPOINTS: Record<string, { url?: string; headers: (key: string) => Record
   },
 };
 
-/** OpenAI, Anthropic, Groq and DeepSeek all list models as `{ data: [{ id }] }`. */
 function parseModelIds(body: unknown): string[] | undefined {
   if (typeof body !== 'object' || body === null) return undefined;
   const data = (body as { data?: unknown }).data;
@@ -94,7 +93,6 @@ export async function validateApiKey(
   baseUrl?: string,
   model?: string,
 ): Promise<KeyValidation> {
-  // --- OpenAI with custom base URL (inference probe) ---
   if (provider === 'openai' && !isOpenAIEndpoint(baseUrl)) {
     const trimmedBase = baseUrl?.trim();
     if (!trimmedBase) {
@@ -104,17 +102,14 @@ export async function validateApiKey(
 
     const headers = { Authorization: `Bearer ${apiKey}` };
 
-    // If no model selected, try to list models first
     const selectedModel = model?.trim();
     if (!selectedModel) {
       const models = await fetchModelsFromUrl(`${normalizeUrl(trimmedBase)}/models`, headers);
       return models ? { valid: false, reason: 'model-required', models } : { valid: false, reason: 'model-required' };
     }
 
-    // Probe with a minimal chat completion
     const probeOk = await probeWithChatCompletion(trimmedBase, selectedModel, headers);
     if (!probeOk) {
-      // Check if model is in the catalog to distinguish bad model from bad key
       const models = await fetchModelsFromUrl(`${normalizeUrl(trimmedBase)}/models`, headers);
       if (models && !models.includes(selectedModel)) {
         return { valid: false, reason: 'model-invalid', models };
@@ -122,12 +117,10 @@ export async function validateApiKey(
       return { valid: false, reason: 'rejected' };
     }
 
-    // Key is valid — also fetch model list
     const models = await fetchModelsFromUrl(`${normalizeUrl(trimmedBase)}/models`, headers);
     return models ? { valid: true, models } : { valid: true };
   }
 
-  // --- Standard provider validation (list models endpoint) ---
   const endpoint = ENDPOINTS[provider];
   const url = endpoint?.url ?? null;
   if (!url) {
