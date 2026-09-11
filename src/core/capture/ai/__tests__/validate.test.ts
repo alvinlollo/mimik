@@ -95,7 +95,7 @@ describe('validateApiKey', () => {
 
   describe('openai with custom base URL (inference probe)', () => {
     it('returns rejected when probe returns 401', async () => {
-      fetchMock.mockResolvedValueOnce(errorResponse(401)); // chat completions
+      fetchMock.mockResolvedValueOnce(errorResponse(401));
       expect(await validateApiKey('openai', 'bad-key', 'https://api.example.com/v1', 'selected-model')).toEqual({
         valid: false,
         reason: 'rejected',
@@ -147,7 +147,7 @@ describe('validateApiKey', () => {
     });
 
     it('returns model-invalid when model is not in catalog', async () => {
-      fetchMock.mockResolvedValueOnce(errorResponse(404)); // chat probe fails
+      fetchMock.mockResolvedValueOnce(errorResponse(404));
       fetchMock.mockResolvedValueOnce(modelsBody('public-model', 'selected-model'));
       expect(await validateApiKey('openai', 'sk-key', 'https://api.example.com/v1', 'not-in-catalog')).toEqual({
         valid: false,
@@ -157,7 +157,7 @@ describe('validateApiKey', () => {
     });
 
     it('returns model-invalid when model is not in catalog (whitespace)', async () => {
-      fetchMock.mockResolvedValueOnce(errorResponse(404)); // chat completions probe fails
+      fetchMock.mockResolvedValueOnce(errorResponse(404));
       fetchMock.mockResolvedValueOnce(modelsBody('public-model', 'selected-model'));
       expect(await validateApiKey('openai', 'sk-key', 'https://api.example.com/v1', '  missing-model  ')).toEqual({
         valid: false,
@@ -167,7 +167,7 @@ describe('validateApiKey', () => {
     });
 
     it('returns model-invalid when catalog is reachable but model probe fails', async () => {
-      fetchMock.mockResolvedValueOnce(errorResponse(404)); // chat completions
+      fetchMock.mockResolvedValueOnce(errorResponse(404));
       fetchMock.mockResolvedValueOnce(modelsBody('public-model', 'selected-model'));
       expect(await validateApiKey('openai', 'sk-key', 'https://api.example.com/v1', 'missing-model')).toEqual({
         valid: false,
